@@ -1,0 +1,13 @@
+{
+  "name": "nomu-print-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local ESC/POS bridge for Nomu receipt printing",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
