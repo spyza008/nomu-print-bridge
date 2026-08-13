@@ -14,10 +14,9 @@ async function prepareThermalPhoto(image, width, height) {
     .grayscale()
     .blur(0.55)
     .normalise({ lower: 8, upper: 92 })
-    // Keep the strong midtone contrast, but retain detail below the eyes:
-    // less black clipping plus a gentle tonal lift before dithering.
-    .linear(1.42, -10)
-    .gamma(1.9)
+    // Lift deep tones, then stretch the remaining midtones around the centre.
+    .linear(1.42, -30)
+    .gamma(1.7)
     .sharpen({ sigma: 0.65, m1: 0.45, m2: 0.2 })
     .png()
     .toBuffer();
