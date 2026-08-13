@@ -1,6 +1,6 @@
 # Nomu Print Bridge
 
-บริการ Node.js ที่รันในร้านและส่ง PNG จาก Nomu ไปยังเครื่องพิมพ์ ESC/POS ทาง TCP (ES-8803WA ปกติใช้ `9100`) โดยไม่ต้องติดตั้งแอปบน iPad หรือสมัคร Apple Developer Program
+บริการ Node.js ที่รันในร้านและส่ง PNG จาก Nomu ไปยังเครื่องพิมพ์ ESC/POS ทาง TCP หรือ USB (Windows) โดยไม่ต้องติดตั้งแอปบน iPad หรือสมัคร Apple Developer Program
 
 ## เริ่มต้น
 
@@ -16,6 +16,14 @@
 การพิมพ์ USB ใช้ Windows Print Spooler แบบ `RAW` จึงส่งคำสั่ง ESC/POS ไปยังไดรเวอร์โดยตรง. ไม่ต้องแชร์เครื่องพิมพ์ และ iPad ไม่ต้องต่อ USB กับเครื่องพิมพ์
 
 หากภายหลังมีสาย LAN ให้เปลี่ยนเป็น **LAN / Wi-Fi (TCP)** แล้วระบุ IP/port ของเครื่องพิมพ์ได้ทันที
+
+## รับงานจาก Nomu ผ่าน Supabase
+
+1. ใน Nomu หน้า Admin กรอก Supabase URL และ anon key แล้วกด **คัดลอก SQL Setup** ไป Run ใน Supabase SQL Editor
+2. ใน Nomu เลือกปลายทางการพิมพ์เป็น **Windows Print Bridge ผ่าน Supabase**
+3. ที่หน้า Bridge กรอก Supabase Project URL และ **service_role key** จาก Supabase Dashboard > Settings > API แล้วบันทึก
+
+Bridge จะตรวจตาราง `nomu_print_jobs` ทุก 2 วินาที, พิมพ์งานทีละรายการ และบันทึกสถานะ `printed` หรือ `failed` กลับไปที่ Supabase. service_role key เป็นความลับ: กรอกเฉพาะหน้า Bridge บน Windows และห้ามใส่ใน Nomu/GitHub Pages
 
 ต้องการให้เริ่มอัตโนมัติหลังเปิดเครื่อง ให้เปิด PowerShell แบบปกติในโฟลเดอร์นี้และรัน:
 

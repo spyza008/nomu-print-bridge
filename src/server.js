@@ -4,6 +4,7 @@ const path = require('node:path');
 const { readConfig, saveConfig, publicConfig, validateConfig } = require('./config');
 const { initialize, cut, feed, text, pngToRaster } = require('./escpos');
 const { sendJob, PrintQueue } = require('./printer');
+const { isConfigured, nextPendingJob, updateJob } = require('./supabase-queue');
 
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -11,6 +12,7 @@ const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const publicDir = path.join(__dirname, '..', 'public');
 let config = readConfig();
 const queue = new PrintQueue();
+let polling = false;
 
 function json(response, status, payload) {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -60,6 +62,26 @@ async function printImage(job) {
   return { id: job.id || null, bytes: output.length };
 }
 
+async function pollSupabaseQueue() {
+  if (polling || !isConfigured(config)) return;
+  polling = true;
+  try {
+    const job = await nextPendingJob(config);
+    if (!job) return;
+    await updateJob(config, job.id, { status: 'printing', error_message: null });
+    try {
+      await queue.enqueue(`supabase-${job.id}`, () => printImage({ id: `supabase-${job.id}`, imageDataUrl: job.image_data_url }));
+      await updateJob(config, job.id, { status: 'printed', printed_at: new Date().toISOString(), error_message: null });
+      console.log(`Printed Supabase job ${job.id}`);
+    } catch (error) {
+      await updateJob(config, job.id, { status: 'failed', error_message: String(error.message || error).slice(0, 1000) });
+      console.error(`Failed Supabase job ${job.id}:`, error);
+    }
+  } catch (error) {
+    console.error('Supabase queue poll failed:', error.message);
+  } finally { polling = false; }
+}
+
 async function handler(request, response) {
   cors(request, response);
   if (request.method === 'OPTIONS') return response.writeHead(204).end();
@@ -98,3 +120,5 @@ server.listen(PORT, HOST, () => {
   console.log(`Nomu Print Bridge listening at http://${HOST}:${PORT}`);
   console.log(`Open the configuration page on the bridge computer. API key: ${config.apiKey}`);
 });
+setInterval(pollSupabaseQueue, 2000);
+pollSupabaseQueue();

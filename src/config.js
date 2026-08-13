@@ -13,6 +13,10 @@ function defaults() {
     apiKey: crypto.randomBytes(24).toString('base64url'),
     allowedOrigins: ['https://nalatikana.github.io'],
     paperWidth: 576,
+    supabaseUrl: '',
+    supabaseServiceRoleKey: '',
+    supabaseQueueTable: 'nomu_print_jobs',
+    pollIntervalMs: 2000,
   };
 }
 
@@ -40,6 +44,10 @@ function publicConfig(config) {
     printerName: config.printerName,
     allowedOrigins: config.allowedOrigins,
     paperWidth: config.paperWidth,
+    supabaseUrl: config.supabaseUrl,
+    supabaseConfigured: Boolean(config.supabaseUrl && config.supabaseServiceRoleKey),
+    supabaseQueueTable: config.supabaseQueueTable,
+    pollIntervalMs: config.pollIntervalMs,
   };
 }
 
@@ -51,6 +59,11 @@ function validateConfig(input, previous) {
   if (typeof input.printerName === 'string') config.printerName = input.printerName.trim();
   if (Array.isArray(input.allowedOrigins) && input.allowedOrigins.every(value => typeof value === 'string' && value.startsWith('https://'))) config.allowedOrigins = input.allowedOrigins;
   if ([384, 576].includes(input.paperWidth)) config.paperWidth = input.paperWidth;
+  if (typeof input.supabaseUrl === 'string') config.supabaseUrl = input.supabaseUrl.trim().replace(/\/$/, '');
+  if (typeof input.supabaseServiceRoleKey === 'string' && input.supabaseServiceRoleKey.trim()) config.supabaseServiceRoleKey = input.supabaseServiceRoleKey.trim();
+  if (input.clearSupabaseServiceRoleKey === true) config.supabaseServiceRoleKey = '';
+  if (typeof input.supabaseQueueTable === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(input.supabaseQueueTable)) config.supabaseQueueTable = input.supabaseQueueTable;
+  if (Number.isInteger(input.pollIntervalMs) && input.pollIntervalMs >= 1000 && input.pollIntervalMs <= 60000) config.pollIntervalMs = input.pollIntervalMs;
   if (input.rotateApiKey === true) config.apiKey = crypto.randomBytes(24).toString('base64url');
   return config;
 }
