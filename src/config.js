@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { defaultTemplate, validateTemplate } = require('./template');
 
 const CONFIG_PATH = process.env.NOMU_BRIDGE_CONFIG || path.join(process.cwd(), 'data', 'config.json');
 
@@ -17,6 +18,7 @@ function defaults() {
     supabaseServiceRoleKey: '',
     supabaseQueueTable: 'nomu_print_jobs',
     pollIntervalMs: 2000,
+    receiptTemplate: defaultTemplate(),
   };
 }
 
@@ -48,6 +50,7 @@ function publicConfig(config) {
     supabaseConfigured: Boolean(config.supabaseUrl && config.supabaseServiceRoleKey),
     supabaseQueueTable: config.supabaseQueueTable,
     pollIntervalMs: config.pollIntervalMs,
+    receiptTemplate: config.receiptTemplate,
   };
 }
 
@@ -64,6 +67,7 @@ function validateConfig(input, previous) {
   if (input.clearSupabaseServiceRoleKey === true) config.supabaseServiceRoleKey = '';
   if (typeof input.supabaseQueueTable === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(input.supabaseQueueTable)) config.supabaseQueueTable = input.supabaseQueueTable;
   if (Number.isInteger(input.pollIntervalMs) && input.pollIntervalMs >= 1000 && input.pollIntervalMs <= 60000) config.pollIntervalMs = input.pollIntervalMs;
+  if (input.receiptTemplate && typeof input.receiptTemplate === 'object') config.receiptTemplate = validateTemplate(input.receiptTemplate, config.receiptTemplate);
   if (input.rotateApiKey === true) config.apiKey = crypto.randomBytes(24).toString('base64url');
   return config;
 }

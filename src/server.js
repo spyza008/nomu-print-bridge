@@ -5,6 +5,7 @@ const { readConfig, saveConfig, publicConfig, validateConfig } = require('./conf
 const { initialize, cut, feed, text, pngToRaster } = require('./escpos');
 const { sendJob, PrintQueue } = require('./printer');
 const { isConfigured, nextPendingJob, updateJob } = require('./supabase-queue');
+const { renderReceipt } = require('./template');
 
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -75,6 +76,14 @@ async function printImage(job) {
   return { id: job.id || null, bytes: output.length };
 }
 
+async function printTemplateJob(job) {
+  const image = job.imageDataUrl ? await imageSourceToPng(job.imageDataUrl) : null;
+  const png = await renderReceipt({ image, orderNo: job.orderNo, fortuneText: job.fortuneText, rewardText: job.rewardText }, config.receiptTemplate);
+  const output = Buffer.concat([initialize(), pngToRaster(png, config.paperWidth), feed(3), cut()]);
+  await sendJob(config, output);
+  return { id: job.id || null, bytes: output.length };
+}
+
 async function pollSupabaseQueue() {
   if (polling || !isConfigured(config)) return;
   polling = true;
@@ -83,7 +92,10 @@ async function pollSupabaseQueue() {
     if (!job) return;
     await updateJob(config, job.id, { status: 'printing', error_message: null });
     try {
-      await queue.enqueue(`supabase-${job.id}`, () => printImage({ id: `supabase-${job.id}`, imageDataUrl: job.image_data_url }));
+      const templateJob = Boolean(job.fortune_text || job.reward_text);
+      await queue.enqueue(`supabase-${job.id}`, () => templateJob
+        ? printTemplateJob({ id: `supabase-${job.id}`, imageDataUrl: job.image_data_url, orderNo: job.order_no, fortuneText: job.fortune_text, rewardText: job.reward_text })
+        : printImage({ id: `supabase-${job.id}`, imageDataUrl: job.image_data_url }));
       await updateJob(config, job.id, { status: 'printed', printed_at: new Date().toISOString(), error_message: null });
       console.log(`Printed Supabase job ${job.id}`);
     } catch (error) {
@@ -111,9 +123,20 @@ async function handler(request, response) {
     config = validateConfig(body, config); saveConfig(config);
     return json(response, 200, { settings: publicConfig(config), apiKey: body.rotateApiKey ? config.apiKey : undefined });
   }
+  if (request.method === 'GET' && url.pathname === '/api/template') return json(response, 200, { template: config.receiptTemplate });
+  if (request.method === 'PUT' && url.pathname === '/api/template') {
+    const body = await readJson(request);
+    config = validateConfig({ receiptTemplate: body.template }, config); saveConfig(config);
+    return json(response, 200, { template: config.receiptTemplate });
+  }
   if (request.method === 'POST' && url.pathname === '/api/test-print') {
     const id = `test-${Date.now()}`;
     const result = await queue.enqueue(id, () => sendJob(config, Buffer.concat([initialize(), text('NOMU Print Bridge'), text('Printer connection OK'), feed(3), cut()])));
+    return json(response, 200, { ok: true, id, result });
+  }
+  if (request.method === 'POST' && url.pathname === '/api/test-template') {
+    const id = `template-${Date.now()}`;
+    const result = await queue.enqueue(id, () => printTemplateJob({ id, orderNo: 'TEST-001', fortuneText: 'วันนี้ไม่ต้องเก่งที่สุด แค่ไปต่อก็พอ', rewardText: 'ทดลองใช้ฟรี' }));
     return json(response, 200, { ok: true, id, result });
   }
   if (request.method === 'POST' && url.pathname === '/api/print') {

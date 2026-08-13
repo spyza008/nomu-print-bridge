@@ -7,6 +7,9 @@
     "start": "node src/server.js",
     "test": "node --test"
   },
+  "dependencies": {
+    "sharp": "^0.34.3"
+  },
   "engines": {
     "node": ">=20"
   }

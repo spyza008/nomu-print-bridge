@@ -14,7 +14,7 @@ async function request(config, path, options = {}) {
 
 async function nextPendingJob(config) {
   const table = encodeURIComponent(config.supabaseQueueTable);
-  const rows = await request(config, `${table}?status=eq.pending&select=id,order_no,image_data_url&order=id.asc&limit=1`);
+  const rows = await request(config, `${table}?status=eq.pending&select=id,order_no,image_data_url,fortune_text,reward_text&order=id.asc&limit=1`);
   return rows[0] || null;
 }
 
