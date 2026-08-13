@@ -7,6 +7,7 @@ const $=id=>document.getElementById(id), message=$('message');
 function updateTransport(){const usb=$('transport').value==='windows-spool';$('tcpSettings').hidden=usb;$('usbSettings').hidden=!usb} $('transport').onchange=updateTransport;
 const headers=()=>({'content-type':'application/json','x-bridge-key':$('key').value.trim()});
 async function call(path, options={}) { const r=await fetch(path,{...options,headers:{...headers(),...(options.headers||{})}}); const b=await r.json(); if(!r.ok) throw Error(b.error||'Request failed'); return b; }
+function populateSettings(s){for(const key of ['printerHost','printerPort','printerTransport','printerName','supabaseUrl'])if(s[key]!==undefined)$(key==='printerHost'?'host':key==='printerPort'?'port':key).value=s[key];$('origins').value=(s.allowedOrigins||[]).join('\n');populateTemplate(s.receiptTemplate||{});updateTransport()}
 $('save').onclick=async()=>{try{const b=await call('/api/settings',{method:'PUT',body:JSON.stringify({printerTransport:$('transport').value,printerHost:$('host').value,printerPort:Number($('port').value),printerName:$('printerName').value,supabaseUrl:$('supabaseUrl').value,supabaseServiceRoleKey:$('supabaseServiceRoleKey').value,allowedOrigins:$('origins').value.split('\n').map(x=>x.trim()).filter(Boolean)})});populateTemplate(b.settings.receiptTemplate||{});message.textContent=b.settings.supabaseConfigured?'บันทึกแล้ว และ Print Bridge กำลังตรวจคิว Supabase':'บันทึกแล้ว';if(b.apiKey)$('key').value=b.apiKey}catch(e){message.textContent=e.message}};
 $('test').onclick=async()=>{try{await call('/api/test-print',{method:'POST',body:'{}'});message.textContent='ส่งคำสั่งทดสอบพิมพ์แล้ว'}catch(e){message.textContent=e.message}};
 const template=()=>({logoText:$('logoText').value,subtitle:$('subtitle').value,footerText:$('footerText').value,photoHeight:Number($('photoHeight').value),messageSize:Number($('messageSize').value),showOrder:$('showOrder').checked,showReward:$('showReward').checked});
@@ -16,4 +17,5 @@ $('saveTemplate').onclick=async()=>{try{await call('/api/template',{method:'PUT'
 $('testTemplate').onclick=async()=>{try{await call('/api/test-template',{method:'POST',body:'{}'});message.textContent='ส่งตัวอย่าง Template ไปพิมพ์แล้ว'}catch(e){message.textContent=e.message}};
 message.textContent='ใส่ API key ที่ Bridge แสดงตอนเริ่มทำงาน แล้วบันทึก IP เครื่องพิมพ์';
 updateTransport();
+fetch('/api/settings').then(r=>r.json()).then(b=>{populateSettings(b.settings||{});message.textContent=b.settings?.supabaseConfigured?'โหลดการตั้งค่าที่บันทึกไว้แล้ว (service role key ถูกซ่อนไว้)':'โหลดการตั้งค่าที่บันทึกไว้แล้ว'}).catch(()=>{message.textContent='ใส่ API key ที่ Bridge แสดงตอนเริ่มทำงาน แล้วบันทึก IP เครื่องพิมพ์'});
 </script></body></html>

@@ -116,8 +116,10 @@ async function handler(request, response) {
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     return fs.createReadStream(path.join(publicDir, 'index.html')).pipe(response);
   }
-  if (url.pathname.startsWith('/api/') && !isAuthorized(request)) return json(response, 401, { error: 'Unauthorized' });
+  // The configuration page needs to restore non-secret fields after refresh.
+  // publicConfig deliberately excludes API and Supabase service-role keys.
   if (request.method === 'GET' && url.pathname === '/api/settings') return json(response, 200, { settings: publicConfig(config) });
+  if (url.pathname.startsWith('/api/') && !isAuthorized(request)) return json(response, 401, { error: 'Unauthorized' });
   if (request.method === 'PUT' && url.pathname === '/api/settings') {
     const body = await readJson(request);
     config = validateConfig(body, config); saveConfig(config);
