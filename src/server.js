@@ -50,15 +50,15 @@ function readJson(request) {
   });
 }
 
-function dataUrlToPng(value) {
-  const match = /^data:image\/png;base64,([a-zA-Z0-9+/=]+)$/.exec(value || '');
-  if (!match) throw new Error('imageDataUrl must be a PNG data URL');
+function dataUrlToImage(value) {
+  const match = /^data:image\/(?:png|jpe?g|webp);base64,([a-zA-Z0-9+/=]+)$/.exec(value || '');
+  if (!match) throw new Error('imageDataUrl must be a PNG, JPEG, or WebP data URL');
   return Buffer.from(match[1], 'base64');
 }
 
 async function imageSourceToPng(value) {
   if (typeof value !== 'string' || !value) throw new Error('imageDataUrl is required');
-  if (value.startsWith('data:')) return dataUrlToPng(value);
+  if (value.startsWith('data:')) return dataUrlToImage(value);
   let url;
   try { url = new URL(value); } catch { throw new Error('imageDataUrl must be a PNG data URL or HTTPS URL'); }
   if (url.protocol !== 'https:') throw new Error('Only HTTPS image URLs are allowed');
@@ -139,6 +139,18 @@ async function handler(request, response) {
   if (request.method === 'POST' && url.pathname === '/api/test-template') {
     const id = `template-${Date.now()}`;
     const result = await queue.enqueue(id, () => printTemplateJob({ id, orderNo: 'TEST-001', fortuneText: 'วันนี้ไม่ต้องเก่งที่สุด แค่ไปต่อก็พอ', rewardText: 'ทดลองใช้ฟรี' }));
+    return json(response, 200, { ok: true, id, result });
+  }
+  if (request.method === 'POST' && url.pathname === '/api/test-image') {
+    const body = await readJson(request);
+    const id = `image-${Date.now()}`;
+    const result = await queue.enqueue(id, () => printTemplateJob({
+      id,
+      imageDataUrl: body.imageDataUrl,
+      orderNo: 'PHOTO-TEST',
+      fortuneText: 'ทดสอบคุณภาพรูปภาพ',
+      rewardText: '',
+    }));
     return json(response, 200, { ok: true, id, result });
   }
   if (request.method === 'POST' && url.pathname === '/api/print') {
