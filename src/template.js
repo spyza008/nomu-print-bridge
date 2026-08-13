@@ -1,6 +1,23 @@
 const sharp = require('sharp');
 
 const PAPER_WIDTH = 576;
+const FOOTER_BOTTOM_SPACE = 48;
+
+// A receipt printer has no grey ink: all photographic detail becomes a pattern
+// of black dots. Prepare only the photo as a light, low-noise image before the
+// final Floyd-Steinberg pass. Text is rendered separately and remains crisp.
+async function prepareThermalPhoto(image, width, height) {
+  return sharp(image)
+    .rotate()
+    .resize({ width, height, fit: 'cover', position: 'centre' })
+    .grayscale()
+    .blur(0.35)
+    .normalise({ lower: 2, upper: 98 })
+    .linear(0.78, 46)
+    .sharpen({ sigma: 0.6, m1: 0.4, m2: 0.2 })
+    .png()
+    .toBuffer();
+}
 
 function defaultTemplate() {
   return {
@@ -77,11 +94,11 @@ async function renderReceipt({ image, orderNo = '', fortuneText = '', rewardText
   const messageHeight = Math.max(70, messageLines.length * template.messageSize * 1.3 + 35);
   const rewardHeight = template.showReward && rewardText ? 48 : 0;
   const orderHeight = template.showOrder && orderNo ? 38 : 0;
-  const height = headerHeight + (hasImage ? template.photoHeight + 24 : 0) + 16 + messageHeight + rewardHeight + orderHeight + 56;
+  const height = headerHeight + (hasImage ? template.photoHeight + 24 : 0) + 16 + messageHeight + rewardHeight + orderHeight + 56 + FOOTER_BOTTOM_SPACE;
   const overlays = [{ input: Buffer.from(`<svg width="${PAPER_WIDTH}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="white"/>${svgText({ text: template.logoText, y: template.logoSize + 8, size: template.logoSize, weight: 800 })}${svgText({ text: template.subtitle, y: template.logoSize + 35, size: 14, weight: 600, fill: '#444', maxChars: 60 })}</svg>`), top: 0, left: 0 }];
   let cursorY = headerHeight;
   if (hasImage) {
-    const photo = await sharp(image).rotate().resize({ width: contentWidth, height: template.photoHeight, fit: 'cover', position: 'centre' }).png().toBuffer();
+    const photo = await prepareThermalPhoto(image, contentWidth, template.photoHeight);
     overlays.push({ input: photo, top: cursorY, left: template.padding });
     cursorY += template.photoHeight + 24;
   }
@@ -91,10 +108,10 @@ async function renderReceipt({ image, orderNo = '', fortuneText = '', rewardText
   cursorY += messageHeight;
   if (template.showReward && rewardText) { bodySvg.push(svgText({ text: rewardText, y: cursorY, size: 23, weight: 800, maxChars: 34 })); cursorY += rewardHeight; }
   if (template.showOrder && orderNo) { bodySvg.push(svgText({ text: `Order: ${orderNo}`, y: cursorY, size: 16, weight: 600, maxChars: 60 })); }
-  bodySvg.push(svgText({ text: template.footerText, y: height - 22, size: 14, weight: 700, fill: '#333', maxChars: 60 }));
+  bodySvg.push(svgText({ text: template.footerText, y: height - FOOTER_BOTTOM_SPACE - 22, size: 14, weight: 700, fill: '#333', maxChars: 60 }));
   bodySvg.push('</svg>');
   overlays.push({ input: Buffer.from(bodySvg.join('')), top: 0, left: 0 });
   return sharp({ create: { width: PAPER_WIDTH, height, channels: 4, background: '#ffffff' } }).composite(overlays).png().toBuffer();
 }
 
-module.exports = { defaultTemplate, validateTemplate, renderReceipt, wrapText };
+module.exports = { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto };
