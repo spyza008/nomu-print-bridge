@@ -33,10 +33,35 @@ function escapeXml(value) {
 }
 
 function wrapText(value, maxChars, maxLines = 3) {
-  const characters = Array.from(String(value || '').trim());
+  const source = String(value || '').trim();
+  if (!source) return [''];
+  // Thai does not use spaces between every word.  Segment it first so a
+  // receipt line never breaks in the middle of a recognised Thai word.
+  const segmenter = typeof Intl.Segmenter === 'function'
+    ? new Intl.Segmenter('th', { granularity: 'word' })
+    : null;
+  const segments = segmenter
+    ? Array.from(segmenter.segment(source), ({ segment }) => segment)
+    : source.split(/(\s+)/);
   const lines = [];
-  while (characters.length && lines.length < maxLines) lines.push(characters.splice(0, maxChars).join(''));
-  if (characters.length) lines[lines.length - 1] = `${lines[lines.length - 1].slice(0, -1)}…`;
+  let line = '';
+  let truncated = false;
+  for (const segment of segments) {
+    const next = `${line}${segment}`;
+    if (Array.from(next).length <= maxChars || !line) {
+      line = next;
+      continue;
+    }
+    lines.push(line.trimEnd());
+    if (lines.length === maxLines) { truncated = true; break; }
+    line = segment.trimStart();
+  }
+  if (!truncated && line) lines.push(line.trimEnd());
+  if (lines.length > maxLines) { lines.length = maxLines; truncated = true; }
+  if (truncated && lines.length) {
+    const characters = Array.from(lines[lines.length - 1]);
+    lines[lines.length - 1] = `${characters.slice(0, Math.max(0, maxChars - 1)).join('').trimEnd()}…`;
+  }
   return lines.length ? lines : [''];
 }
 
@@ -72,4 +97,4 @@ async function renderReceipt({ image, orderNo = '', fortuneText = '', rewardText
   return sharp({ create: { width: PAPER_WIDTH, height, channels: 4, background: '#ffffff' } }).composite(overlays).png().toBuffer();
 }
 
-module.exports = { defaultTemplate, validateTemplate, renderReceipt };
+module.exports = { defaultTemplate, validateTemplate, renderReceipt, wrapText };
