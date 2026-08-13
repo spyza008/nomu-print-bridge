@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { readConfig, saveConfig, publicConfig, validateConfig } = require('./config');
 const { initialize, cut, feed, text, pngToRaster } = require('./escpos');
-const { sendToPrinter, PrintQueue } = require('./printer');
+const { sendJob, PrintQueue } = require('./printer');
 
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -56,7 +56,7 @@ function dataUrlToPng(value) {
 async function printImage(job) {
   const png = dataUrlToPng(job.imageDataUrl);
   const output = Buffer.concat([initialize(), pngToRaster(png, config.paperWidth), feed(3), cut()]);
-  await sendToPrinter({ host: config.printerHost, port: config.printerPort, data: output });
+  await sendJob(config, output);
   return { id: job.id || null, bytes: output.length };
 }
 
@@ -64,7 +64,7 @@ async function handler(request, response) {
   cors(request, response);
   if (request.method === 'OPTIONS') return response.writeHead(204).end();
   const url = new URL(request.url, `http://${request.headers.host}`);
-  if (request.method === 'GET' && url.pathname === '/health') return json(response, 200, { ok: true, printerConfigured: Boolean(config.printerHost) });
+  if (request.method === 'GET' && url.pathname === '/health') return json(response, 200, { ok: true, printerConfigured: config.printerTransport === 'windows-spool' ? Boolean(config.printerName) : Boolean(config.printerHost) });
   if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     return fs.createReadStream(path.join(publicDir, 'index.html')).pipe(response);
@@ -78,7 +78,7 @@ async function handler(request, response) {
   }
   if (request.method === 'POST' && url.pathname === '/api/test-print') {
     const id = `test-${Date.now()}`;
-    const result = await queue.enqueue(id, () => sendToPrinter({ host: config.printerHost, port: config.printerPort, data: Buffer.concat([initialize(), text('NOMU Print Bridge'), text('Printer connection OK'), feed(3), cut()]) }));
+    const result = await queue.enqueue(id, () => sendJob(config, Buffer.concat([initialize(), text('NOMU Print Bridge'), text('Printer connection OK'), feed(3), cut()])));
     return json(response, 200, { ok: true, id, result });
   }
   if (request.method === 'POST' && url.pathname === '/api/print') {

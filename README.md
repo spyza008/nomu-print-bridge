@@ -9,8 +9,13 @@
 1. ติดตั้ง [Node.js 20 LTS](https://nodejs.org/) บน Windows PC ที่จะเปิดไว้ในร้าน
 2. คัดลอกทั้งโฟลเดอร์ `nomu-print-bridge` ไปไว้ เช่น `C:\Nomu\nomu-print-bridge`
 3. ดับเบิลคลิก `start-bridge.bat` (อนุญาต Windows Firewall เฉพาะ **Private networks** หากถูกถาม)
-4. เปิด `http://localhost:8787` บน Windows PC แล้วนำ API key จากหน้าต่าง Bridge มากรอก
-5. ตั้ง IP เครื่องพิมพ์และกด Test Print
+4. ติดตั้งไดรเวอร์ ES-8803WA และต่อเครื่องพิมพ์ด้วย USB ให้ Windows มองเห็นใน **Settings > Bluetooth & devices > Printers & scanners**
+5. เปิด `http://localhost:8787` บน Windows PC แล้วนำ API key จากหน้าต่าง Bridge มากรอก
+6. เลือก **USB ผ่าน Windows Printer Driver** และกรอกชื่อเครื่องพิมพ์ให้ตรงกับชื่อใน Windows จากนั้นกด Test Print
+
+การพิมพ์ USB ใช้ Windows Print Spooler แบบ `RAW` จึงส่งคำสั่ง ESC/POS ไปยังไดรเวอร์โดยตรง. ไม่ต้องแชร์เครื่องพิมพ์ และ iPad ไม่ต้องต่อ USB กับเครื่องพิมพ์
+
+หากภายหลังมีสาย LAN ให้เปลี่ยนเป็น **LAN / Wi-Fi (TCP)** แล้วระบุ IP/port ของเครื่องพิมพ์ได้ทันที
 
 ต้องการให้เริ่มอัตโนมัติหลังเปิดเครื่อง ให้เปิด PowerShell แบบปกติในโฟลเดอร์นี้และรัน:
 

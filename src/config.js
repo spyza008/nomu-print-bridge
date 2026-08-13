@@ -8,6 +8,8 @@ function defaults() {
   return {
     printerHost: '',
     printerPort: 9100,
+    printerTransport: 'tcp',
+    printerName: '',
     apiKey: crypto.randomBytes(24).toString('base64url'),
     allowedOrigins: ['https://nalatikana.github.io'],
     paperWidth: 576,
@@ -34,6 +36,8 @@ function publicConfig(config) {
   return {
     printerHost: config.printerHost,
     printerPort: config.printerPort,
+    printerTransport: config.printerTransport,
+    printerName: config.printerName,
     allowedOrigins: config.allowedOrigins,
     paperWidth: config.paperWidth,
   };
@@ -43,6 +47,8 @@ function validateConfig(input, previous) {
   const config = { ...previous };
   if (typeof input.printerHost === 'string') config.printerHost = input.printerHost.trim();
   if (Number.isInteger(input.printerPort) && input.printerPort > 0 && input.printerPort < 65536) config.printerPort = input.printerPort;
+  if (['tcp', 'windows-spool'].includes(input.printerTransport)) config.printerTransport = input.printerTransport;
+  if (typeof input.printerName === 'string') config.printerName = input.printerName.trim();
   if (Array.isArray(input.allowedOrigins) && input.allowedOrigins.every(value => typeof value === 'string' && value.startsWith('https://'))) config.allowedOrigins = input.allowedOrigins;
   if ([384, 576].includes(input.paperWidth)) config.paperWidth = input.paperWidth;
   if (input.rotateApiKey === true) config.apiKey = crypto.randomBytes(24).toString('base64url');
