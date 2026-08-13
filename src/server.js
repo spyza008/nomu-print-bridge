@@ -55,8 +55,21 @@ function dataUrlToPng(value) {
   return Buffer.from(match[1], 'base64');
 }
 
+async function imageSourceToPng(value) {
+  if (typeof value !== 'string' || !value) throw new Error('imageDataUrl is required');
+  if (value.startsWith('data:')) return dataUrlToPng(value);
+  let url;
+  try { url = new URL(value); } catch { throw new Error('imageDataUrl must be a PNG data URL or HTTPS URL'); }
+  if (url.protocol !== 'https:') throw new Error('Only HTTPS image URLs are allowed');
+  const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(`Could not download print image (${response.status})`);
+  const png = Buffer.from(await response.arrayBuffer());
+  if (png.length > MAX_BODY_BYTES) throw new Error('Print image is too large');
+  return png;
+}
+
 async function printImage(job) {
-  const png = dataUrlToPng(job.imageDataUrl);
+  const png = await imageSourceToPng(job.imageDataUrl);
   const output = Buffer.concat([initialize(), pngToRaster(png, config.paperWidth), feed(3), cut()]);
   await sendJob(config, output);
   return { id: job.id || null, bytes: output.length };
