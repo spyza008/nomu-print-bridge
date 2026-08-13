@@ -1,10 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const sharp = require('sharp');
-const { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto } = require('../src/template');
+const { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto, svgLogo } = require('../src/template');
 
 test('validates editable receipt template settings', () => {
-  const template = validateTemplate({ logoText: 'NOMU TEST', photoHeight: 500, showOrder: false }, defaultTemplate());
+  const template = validateTemplate({ logoMode: 'text', logoText: 'NOMU TEST', photoHeight: 500, showOrder: false }, defaultTemplate());
+  assert.equal(template.logoMode, 'text');
   assert.equal(template.logoText, 'NOMU TEST');
   assert.equal(template.photoHeight, 500);
   assert.equal(template.showOrder, false);
@@ -30,4 +31,14 @@ test('prepares a photo at the exact thermal template dimensions', async () => {
   assert.equal(metadata.width, 528);
   assert.equal(metadata.height, 410);
   assert.equal(metadata.channels, 3);
+});
+
+test('renders the NOMU brand dot above the right edge of M', () => {
+  const logo = svgLogo({ text: 'NOMU', y: 46, size: 38 });
+  assert.match(logo, /<circle cx="337\.40" cy="3\.44"/);
+});
+
+test('uses the transparent NOMU brand asset in the default receipt', async () => {
+  const png = await renderReceipt({ fortuneText: 'ทดสอบ' }, defaultTemplate());
+  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 });
