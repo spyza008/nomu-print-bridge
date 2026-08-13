@@ -4,18 +4,20 @@ const PAPER_WIDTH = 576;
 const FOOTER_BOTTOM_SPACE = 48;
 
 // A receipt printer has no grey ink: all photographic detail becomes a pattern
-// of black dots. This preset mimics the preferred source treatment: stronger
-// contrast in the face while lifting deep shadows so hair/shirt do not print as
-// one solid black mass. Text is rendered separately and remains crisp.
+// of black dots. The preset approximates the successful iPhone edit: Shadows
+// +85, Contrast +100 and Noise Reduction 23. Colour sliders are intentionally
+// omitted because the final receipt is grayscale.
 async function prepareThermalPhoto(image, width, height) {
   return sharp(image)
     .rotate()
     .resize({ width, height, fit: 'cover', position: 'centre' })
     .grayscale()
-    .blur(0.35)
-    .normalise({ lower: 4, upper: 96 })
-    .linear(0.84, 38)
-    .sharpen({ sigma: 0.7, m1: 0.5, m2: 0.25 })
+    .blur(0.55)
+    .normalise({ lower: 8, upper: 92 })
+    // Lift deep tones, then stretch the remaining midtones around the centre.
+    .linear(1.42, -30)
+    .gamma(1.7)
+    .sharpen({ sigma: 0.65, m1: 0.45, m2: 0.2 })
     .png()
     .toBuffer();
 }
