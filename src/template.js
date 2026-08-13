@@ -4,17 +4,18 @@ const PAPER_WIDTH = 576;
 const FOOTER_BOTTOM_SPACE = 48;
 
 // A receipt printer has no grey ink: all photographic detail becomes a pattern
-// of black dots. Prepare only the photo as a light, low-noise image before the
-// final Floyd-Steinberg pass. Text is rendered separately and remains crisp.
+// of black dots. This preset mimics the preferred source treatment: stronger
+// contrast in the face while lifting deep shadows so hair/shirt do not print as
+// one solid black mass. Text is rendered separately and remains crisp.
 async function prepareThermalPhoto(image, width, height) {
   return sharp(image)
     .rotate()
     .resize({ width, height, fit: 'cover', position: 'centre' })
     .grayscale()
     .blur(0.35)
-    .normalise({ lower: 2, upper: 98 })
-    .linear(0.78, 46)
-    .sharpen({ sigma: 0.6, m1: 0.4, m2: 0.2 })
+    .normalise({ lower: 4, upper: 96 })
+    .linear(0.84, 38)
+    .sharpen({ sigma: 0.7, m1: 0.5, m2: 0.25 })
     .png()
     .toBuffer();
 }
