@@ -77,15 +77,27 @@ function pngToRaster(png, targetWidth = 576) {
   const outputHeight = Math.max(1, Math.round(height * outputWidth / width));
   const bytesPerRow = Math.ceil(outputWidth / 8);
   const pixels = Buffer.alloc(bytesPerRow * outputHeight);
+  // Thermal printers are monochrome. Error diffusion preserves photographs and
+  // thin Thai glyphs far better than a single luminance cutoff.
+  let currentErrors = new Float32Array(outputWidth + 2);
+  let nextErrors = new Float32Array(outputWidth + 2);
   for (let y = 0; y < outputHeight; y += 1) {
     const sourceY = Math.min(height - 1, Math.floor(y * height / outputHeight));
     for (let x = 0; x < outputWidth; x += 1) {
       const sourceX = Math.min(width - 1, Math.floor(x * width / outputWidth));
       const index = (sourceY * width + sourceX) * 4;
       const alpha = rgba[index + 3] / 255;
-      const luminance = (rgba[index] * 0.299 + rgba[index + 1] * 0.587 + rgba[index + 2] * 0.114) * alpha + 255 * (1 - alpha);
-      if (luminance < 160) pixels[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+      const luminance = Math.max(0, Math.min(255, (rgba[index] * 0.299 + rgba[index + 1] * 0.587 + rgba[index + 2] * 0.114) * alpha + 255 * (1 - alpha) + currentErrors[x + 1]));
+      const printedBlack = luminance < 128;
+      if (printedBlack) pixels[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+      const error = luminance - (printedBlack ? 0 : 255);
+      currentErrors[x + 2] += error * 7 / 16;
+      nextErrors[x] += error * 3 / 16;
+      nextErrors[x + 1] += error * 5 / 16;
+      nextErrors[x + 2] += error / 16;
     }
+    currentErrors = nextErrors;
+    nextErrors = new Float32Array(outputWidth + 2);
   }
   const header = Buffer.from([GS, 0x76, 0x30, 0x00, bytesPerRow & 0xff, bytesPerRow >> 8, outputHeight & 0xff, outputHeight >> 8]);
   return Buffer.concat([header, pixels]);
