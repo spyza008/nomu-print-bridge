@@ -4,8 +4,9 @@ const sharp = require('sharp');
 const { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto, svgLogo, receiptFontFamily } = require('../src/template');
 
 test('validates editable receipt template settings', () => {
-  const template = validateTemplate({ logoMode: 'text', logoText: 'NOMU TEST', photoHeight: 500, showOrder: false }, defaultTemplate());
+  const template = validateTemplate({ logoMode: 'text', logoText: 'NOMU TEST', photoHeight: 500, fortuneWeight: 'bold', showOrder: false }, defaultTemplate());
   assert.equal(template.logoMode, 'text');
+  assert.equal(template.fortuneWeight, 'bold');
   assert.equal(template.logoText, 'NOMU TEST');
   assert.equal(template.photoHeight, 500);
   assert.equal(template.showOrder, false);
@@ -23,6 +24,12 @@ test('keeps recognised Thai words together when wrapping a fortune', () => {
     wrapText('วันนี้ไม่ต้องเก่งที่สุด แค่ไปต่อก็พอ', 18),
     ['วันนี้ไม่ต้องเก่ง', 'ที่สุด แค่ไปต่อก็', 'พอ'],
   );
+});
+
+test('honours literal and typed line breaks from the web app', () => {
+  assert.deepEqual(wrapText('บรรทัดแรก\\nบรรทัดสอง', 30), ['บรรทัดแรก', 'บรรทัดสอง']);
+  assert.deepEqual(wrapText('บรรทัดแรก/nบรรทัดสอง', 30), ['บรรทัดแรก', 'บรรทัดสอง']);
+  assert.deepEqual(wrapText('บรรทัดแรก\nบรรทัดสอง', 30), ['บรรทัดแรก', 'บรรทัดสอง']);
 });
 
 test('prepares a photo at the exact thermal template dimensions', async () => {

@@ -34,6 +34,9 @@ function defaultTemplate() {
     photoHeight: 410,
     logoSize: 38,
     messageSize: 30,
+    fortuneWeight: 'regular',
+    rewardWeight: 'bold',
+    footerWeight: 'regular',
     showOrder: true,
     showReward: true,
   };
@@ -48,6 +51,9 @@ function validateTemplate(input, previous = defaultTemplate()) {
     if (Number.isInteger(input[key]) && input[key] >= min && input[key] <= max) template[key] = input[key];
   }
   if (input.logoMode === 'image' || input.logoMode === 'text') template.logoMode = input.logoMode;
+  for (const key of ['fortuneWeight', 'rewardWeight', 'footerWeight']) {
+    if (input[key] === 'regular' || input[key] === 'bold') template[key] = input[key];
+  }
   for (const key of ['showOrder', 'showReward']) if (typeof input[key] === 'boolean') template[key] = input[key];
   return template;
 }
@@ -61,8 +67,25 @@ function receiptFontFamily(text) {
 }
 
 function wrapText(value, maxChars, maxLines = 3) {
-  const source = String(value || '').trim();
+  const source = String(value || '').trim().replace(/\\n|\/n/g, '\n');
   if (!source) return [''];
+  const paragraphs = source.split(/\r?\n/);
+  const lines = [];
+  let truncated = false;
+  for (const paragraph of paragraphs) {
+    const wrapped = wrapParagraph(paragraph, maxChars, maxLines - lines.length);
+    lines.push(...wrapped.lines);
+    if (wrapped.truncated || lines.length >= maxLines) { truncated = wrapped.truncated || paragraphs.indexOf(paragraph) < paragraphs.length - 1; break; }
+  }
+  if (truncated && lines.length) {
+    const characters = Array.from(lines[lines.length - 1]);
+    lines[lines.length - 1] = `${characters.slice(0, Math.max(0, maxChars - 1)).join('').trimEnd()}…`;
+  }
+  return lines.length ? lines : [''];
+}
+
+function wrapParagraph(source, maxChars, maxLines) {
+  if (!source) return { lines: [''], truncated: false };
   // Thai does not use spaces between every word.  Segment it first so a
   // receipt line never breaks in the middle of a recognised Thai word.
   const segmenter = typeof Intl.Segmenter === 'function'
@@ -86,11 +109,7 @@ function wrapText(value, maxChars, maxLines = 3) {
   }
   if (!truncated && line) lines.push(line.trimEnd());
   if (lines.length > maxLines) { lines.length = maxLines; truncated = true; }
-  if (truncated && lines.length) {
-    const characters = Array.from(lines[lines.length - 1]);
-    lines[lines.length - 1] = `${characters.slice(0, Math.max(0, maxChars - 1)).join('').trimEnd()}…`;
-  }
-  return lines.length ? lines : [''];
+  return { lines: lines.length ? lines : [''], truncated };
 }
 
 function svgText({ text, y, size, weight = 600, fill = '#111', maxChars = 28, lineHeight = 1.25, width = PAPER_WIDTH, fontFamily }) {
@@ -136,11 +155,11 @@ async function renderReceipt({ image, orderNo = '', fortuneText = '', rewardText
   }
   const bodySvg = [`<svg width="${PAPER_WIDTH}" height="${height}" xmlns="http://www.w3.org/2000/svg">`, `<line x1="${template.padding}" y1="${cursorY}" x2="${PAPER_WIDTH - template.padding}" y2="${cursorY}" stroke="#111" stroke-width="2"/>`];
   cursorY += 36;
-  bodySvg.push(svgText({ text: fortuneText || 'ขอให้วันนี้เป็นวันที่ดี', y: cursorY, size: template.messageSize, weight: 700, maxChars: Math.max(12, Math.floor(contentWidth / (template.messageSize * 0.7))) }));
+  bodySvg.push(svgText({ text: fortuneText || 'ขอให้วันนี้เป็นวันที่ดี', y: cursorY, size: template.messageSize, weight: template.fortuneWeight === 'bold' ? 700 : 400, maxChars: Math.max(12, Math.floor(contentWidth / (template.messageSize * 0.7))) }));
   cursorY += messageHeight;
-  if (template.showReward && rewardText) { bodySvg.push(svgText({ text: rewardText, y: cursorY, size: 23, weight: 800, maxChars: 34 })); cursorY += rewardHeight; }
+  if (template.showReward && rewardText) { bodySvg.push(svgText({ text: rewardText, y: cursorY, size: 23, weight: template.rewardWeight === 'bold' ? 700 : 400, maxChars: 34 })); cursorY += rewardHeight; }
   if (template.showOrder && orderNo) { bodySvg.push(svgText({ text: `Order: ${orderNo}`, y: cursorY, size: 16, weight: 600, maxChars: 60 })); }
-  bodySvg.push(svgText({ text: template.footerText, y: height - FOOTER_BOTTOM_SPACE - 22, size: 14, weight: 700, fill: '#333', maxChars: 60 }));
+  bodySvg.push(svgText({ text: template.footerText, y: height - FOOTER_BOTTOM_SPACE - 22, size: 14, weight: template.footerWeight === 'bold' ? 700 : 400, fill: '#333', maxChars: 60 }));
   bodySvg.push('</svg>');
   overlays.push({ input: Buffer.from(bodySvg.join('')), top: 0, left: 0 });
   return sharp({ create: { width: PAPER_WIDTH, height, channels: 4, background: '#ffffff' } }).composite(overlays).png().toBuffer();
