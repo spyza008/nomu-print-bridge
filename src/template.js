@@ -137,7 +137,9 @@ async function renderReceipt({ image, orderNo = '', fortuneText = '', rewardText
   const messageHeight = Math.max(70, messageLines.length * template.messageSize * 1.3 + 35);
   const rewardHeight = template.showReward && rewardText ? 48 : 0;
   const orderHeight = template.showOrder && orderNo ? 38 : 0;
-  const height = headerHeight + (hasImage ? template.photoHeight + 24 : 0) + 16 + messageHeight + rewardHeight + orderHeight + 56 + FOOTER_BOTTOM_SPACE;
+  // Sharp requires integer create dimensions. Some editable message sizes make
+  // the line-height calculation fractional (for example, 31 * 1.3).
+  const height = Math.ceil(headerHeight + (hasImage ? template.photoHeight + 24 : 0) + 16 + messageHeight + rewardHeight + orderHeight + 56 + FOOTER_BOTTOM_SPACE);
   const headerSvg = `<svg width="${PAPER_WIDTH}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="white"/>${svgText({ text: template.subtitle, y: template.logoSize + 52, size: 14, weight: 600, fill: '#444', maxChars: 60 })}</svg>`;
   const overlays = [{ input: Buffer.from(headerSvg), top: 0, left: 0 }];
   if (template.logoMode === 'image') {
