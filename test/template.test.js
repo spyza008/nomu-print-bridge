@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const sharp = require('sharp');
-const { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto, svgLogo } = require('../src/template');
+const { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto, svgLogo, receiptFontFamily } = require('../src/template');
 
 test('validates editable receipt template settings', () => {
   const template = validateTemplate({ logoMode: 'text', logoText: 'NOMU TEST', photoHeight: 500, showOrder: false }, defaultTemplate());
@@ -41,4 +41,9 @@ test('renders the NOMU brand dot above the right edge of M', () => {
 test('uses the transparent NOMU brand asset in the default receipt', async () => {
   const png = await renderReceipt({ fortuneText: 'ทดสอบ' }, defaultTemplate());
   assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+});
+
+test('uses Kanit for Thai and Raleway for Latin receipt text', () => {
+  assert.equal(receiptFontFamily('ขอให้วันนี้เป็นวันที่ดี'), 'Kanit');
+  assert.equal(receiptFontFamily('MATCHA FOR THE MODERN MIND.'), 'Raleway');
 });

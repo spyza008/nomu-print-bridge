@@ -56,6 +56,10 @@ function escapeXml(value) {
   return String(value || '').replace(/[<>&'\"]/g, char => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[char]));
 }
 
+function receiptFontFamily(text) {
+  return /[\u0E00-\u0E7F]/.test(String(text || '')) ? 'Kanit' : 'Raleway';
+}
+
 function wrapText(value, maxChars, maxLines = 3) {
   const source = String(value || '').trim();
   if (!source) return [''];
@@ -89,8 +93,8 @@ function wrapText(value, maxChars, maxLines = 3) {
   return lines.length ? lines : [''];
 }
 
-function svgText({ text, y, size, weight = 600, fill = '#111', maxChars = 28, lineHeight = 1.25, width = PAPER_WIDTH }) {
-  return wrapText(text, maxChars).map((line, index) => `<text x="${width / 2}" y="${y + index * size * lineHeight}" text-anchor="middle" font-family="'Leelawadee UI','Noto Sans Thai','Tahoma',sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`).join('');
+function svgText({ text, y, size, weight = 600, fill = '#111', maxChars = 28, lineHeight = 1.25, width = PAPER_WIDTH, fontFamily }) {
+  return wrapText(text, maxChars).map((line, index) => `<text x="${width / 2}" y="${y + index * size * lineHeight}" text-anchor="middle" font-family="'${fontFamily || receiptFontFamily(line)}','Leelawadee UI','Noto Sans Thai','Tahoma',sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`).join('');
 }
 
 function svgLogo({ text, y, size }) {
@@ -142,4 +146,4 @@ async function renderReceipt({ image, orderNo = '', fortuneText = '', rewardText
   return sharp({ create: { width: PAPER_WIDTH, height, channels: 4, background: '#ffffff' } }).composite(overlays).png().toBuffer();
 }
 
-module.exports = { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto, svgLogo };
+module.exports = { defaultTemplate, validateTemplate, renderReceipt, wrapText, prepareThermalPhoto, svgLogo, receiptFontFamily };
