@@ -19,6 +19,15 @@ test('renders a printable PNG from text-only queue data', async () => {
   assert.ok(metadata.height >= 350);
 });
 
+test('renders when editable message sizing produces a fractional layout height', async () => {
+  const template = { ...defaultTemplate(), messageSize: 31 };
+  const png = await renderReceipt({
+    fortuneText: 'This fortune is deliberately long enough to wrap onto a second receipt line.',
+  }, template);
+  const metadata = await sharp(png).metadata();
+  assert.equal(Number.isInteger(metadata.height), true);
+});
+
 test('keeps recognised Thai words together when wrapping a fortune', () => {
   assert.deepEqual(
     wrapText('วันนี้ไม่ต้องเก่งที่สุด แค่ไปต่อก็พอ', 18),
