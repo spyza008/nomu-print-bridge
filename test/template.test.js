@@ -54,3 +54,10 @@ test('uses Kanit for Thai and Raleway for Latin receipt text', () => {
   assert.equal(receiptFontFamily('ขอให้วันนี้เป็นวันที่ดี'), 'Kanit');
   assert.equal(receiptFontFamily('MATCHA FOR THE MODERN MIND.'), 'Raleway');
 });
+
+test('fills omitted template fields from a previous bridge version', () => {
+  const template = validateTemplate({ logoText: 'NOMU' }, defaultTemplate());
+  assert.equal(template.padding, 24);
+  assert.equal(template.photoHeight, 410);
+  assert.equal(template.messageSize, 30);
+});

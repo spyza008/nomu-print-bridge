@@ -24,7 +24,15 @@ function defaults() {
 
 function readConfig() {
   try {
-    return { ...defaults(), ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) };
+    const defaultConfig = defaults();
+    const saved = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    // Template fields evolve over time. Merge them separately so an older
+    // config.json cannot leave dimensions undefined and break Sharp rendering.
+    return {
+      ...defaultConfig,
+      ...saved,
+      receiptTemplate: validateTemplate(saved.receiptTemplate || {}, defaultConfig.receiptTemplate),
+    };
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
     const config = defaults();
